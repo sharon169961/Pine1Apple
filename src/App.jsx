@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-function ResponsiveIframe() {
+function App() {
   const [showOverlay, setShowOverlay] = useState(true);
   const [url, setUrl] = useState("");
   const [currentUrl, setCurrentUrl] = useState("https://exuberant-marketing-937720.framer.app/");
@@ -273,37 +273,42 @@ function ResponsiveIframe() {
       const scoreVariance = riskScores.reduce((sum, score) => sum + Math.pow(score - finalRiskScore, 2), 0) / 3;
       const confidence = Math.min(95, Math.max(70, 90 - scoreVariance / 10));
       
-      // Decision thresholds (calibrated based on ML model performance)
+      // Decision thresholds with detailed risk level messaging
       if (finalRiskScore >= 35) {
         return { 
           safe: false, 
-          reason: `High risk detected: ${[...new Set(reasons)].slice(0, 3).join(', ')}`, 
+          reason: `HIGH RISK DETECTED\nRisk Level: DANGEROUS (${Math.round(finalRiskScore)}/100)\nThreats: ${[...new Set(reasons)].slice(0, 3).join(', ')}\n\nThis URL shows multiple indicators of phishing or malicious content. DO NOT proceed.`, 
           confidence: confidence,
           riskScore: Math.round(finalRiskScore),
+          riskLevel: "HIGH",
           details: [...new Set(reasons)]
         };
       } else if (finalRiskScore >= 20) {
         return { 
           safe: false, 
-          reason: `Medium risk detected: ${[...new Set(reasons)].slice(0, 2).join(', ')}`, 
+          reason: `MEDIUM RISK DETECTED\nRisk Level: SUSPICIOUS (${Math.round(finalRiskScore)}/100)\nConcerns: ${[...new Set(reasons)].slice(0, 2).join(', ')}\n\nThis URL has suspicious characteristics. Proceed with extreme caution.`, 
           confidence: Math.max(75, confidence - 5),
           riskScore: Math.round(finalRiskScore),
+          riskLevel: "MEDIUM",
           details: [...new Set(reasons)]
         };
       } else if (finalRiskScore >= 10) {
         return { 
           safe: false, 
-          reason: `Low risk detected: ${[...new Set(reasons)].slice(0, 1).join(', ')}`, 
+          reason: `LOW RISK DETECTED\nRisk Level: QUESTIONABLE (${Math.round(finalRiskScore)}/100)\nFlag: ${[...new Set(reasons)].slice(0, 1).join(', ')}\n\nMinor suspicious indicators detected. Use caution when entering sensitive information.`, 
           confidence: Math.max(70, confidence - 10),
           riskScore: Math.round(finalRiskScore),
+          riskLevel: "LOW",
           details: [...new Set(reasons)]
         };
       }
       
       return { 
-        safe: true, 
+        safe: true,
+        reason: `URL VERIFIED SAFE\nRisk Level: LEGITIMATE (${Math.round(finalRiskScore)}/100)\nStatus: No malicious indicators detected\n\nThis URL appears to be legitimate and safe to visit.`,
         confidence: Math.max(85, 100 - finalRiskScore),
-        riskScore: Math.round(finalRiskScore)
+        riskScore: Math.round(finalRiskScore),
+        riskLevel: "SAFE"
       };
       
     } catch (error) {
@@ -327,8 +332,22 @@ function ResponsiveIframe() {
       const riskScoreText = safetyCheck.riskScore ? `\nRisk Score: ${safetyCheck.riskScore}/100` : '';
       setUrlError(`${safetyCheck.reason}${confidenceText}${riskScoreText}`);
       return;
+    } else {
+      // Show safe URL confirmation
+      const confidenceText = safetyCheck.confidence ? ` (${safetyCheck.confidence}% confidence)` : '';
+      const riskScoreText = safetyCheck.riskScore !== undefined ? `\nRisk Score: ${safetyCheck.riskScore}/100` : '';
+      setUrlError(`✅ URL appears safe and legitimate${confidenceText}${riskScoreText}`);
+      
+      // Clear the success message after a delay and proceed
+      setTimeout(() => {
+        setUrlError("");
+        proceedWithUrlLoad();
+      }, 1500);
+      return;
     }
-    
+  };
+
+  const proceedWithUrlLoad = () => {
     setIsLoading(true);
     
     // Check if the URL might have iframe restrictions
@@ -488,16 +507,18 @@ function ResponsiveIframe() {
             
             {urlError && (
               <div style={{
-                color: "#dc3545",
+                color: urlError.includes("✅") ? "#155724" : "#dc3545",
                 fontSize: "14px",
                 marginBottom: "15px",
                 padding: "10px",
-                backgroundColor: "#f8d7da",
+                backgroundColor: urlError.includes("✅") ? "#d4edda" : "#f8d7da",
                 borderRadius: "4px",
-                border: "1px solid #f5c6cb"
+                border: urlError.includes("✅") ? "1px solid #c3e6cb" : "1px solid #f5c6cb"
               }}>
-                <div style={{ fontWeight: "bold", marginBottom: "5px" }}>⚠️ Security Alert</div>
-                <div>{urlError}</div>
+                <div style={{ fontWeight: "bold", marginBottom: "5px" }}>
+                  {urlError.includes("✅") ? "🛡️ Security Check Passed" : "⚠️ Security Alert"}
+                </div>
+                <div style={{ whiteSpace: "pre-line" }}>{urlError}</div>
               </div>
             )}
             
@@ -510,12 +531,24 @@ function ResponsiveIframe() {
               borderRadius: "4px",
               border: "1px solid #e9ecef"
             }}>
-              <div style={{ fontWeight: "bold", marginBottom: "5px", color: "#28a745" }}>Advanced ML Phishing Detection v3.0</div>
-              <div>• Multi-model ensemble (Random Forest + XGBoost + LightGBM simulation)</div>
-              <div>• 50+ feature analysis including Shannon entropy & lexical patterns</div>
-              <div>• Brand impersonation detection with homograph attack prevention</div>
-              <div>• Categorized keyword analysis (financial, urgency, deception patterns)</div>
+              <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#28a745" }}>🔒 Advanced ML Phishing Detection v3.0</div>
+              <div style={{ marginBottom: "5px" }}>• Multi-model ensemble (Random Forest + XGBoost + LightGBM simulation)</div>
+              <div style={{ marginBottom: "5px" }}>• 50+ feature analysis including Shannon entropy & lexical patterns</div>
+              <div style={{ marginBottom: "5px" }}>• Brand impersonation detection with homograph attack prevention</div>
+              <div style={{ marginBottom: "5px" }}>• Categorized keyword analysis (financial, urgency, deception patterns)</div>
               <div>• Advanced TLD analysis with suspicious domain detection</div>
+              
+              <div style={{ 
+                marginTop: "10px", 
+                padding: "8px",
+                backgroundColor: "#e8f5e8",
+                borderRadius: "4px",
+                fontSize: "11px",
+                fontWeight: "bold",
+                color: "#2d5f2d"
+              }}>
+                📊 RISK LEVELS: SAFE (0-9) | QUESTIONABLE (10-19) | SUSPICIOUS (20-34) | DANGEROUS (35+)
+              </div>
             </div>
             
             <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
@@ -560,6 +593,4 @@ function ResponsiveIframe() {
   );
 }
 
-export default ResponsiveIframe;
-
-
+export default App;
